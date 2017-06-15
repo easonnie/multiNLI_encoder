@@ -55,37 +55,49 @@ class StackBiLSTMMaxout(nn.Module):
             if s2.size(0) > self.max_l:
                 s2 = s2[:self.max_l, :]
 
-        p_s1 = self.Embd(s1)
-        p_s2 = self.Embd(s2)
-
-        s1_layer1_out = torch_util.auto_rnn_bilstm(self.lstm, p_s1, l1)
-        s2_layer1_out = torch_util.auto_rnn_bilstm(self.lstm, p_s2, l2)
+        # Start encoding sentence 1
 
         # Length truncate
+        p_s1 = self.Embd(s1)
+        s1_layer1_out = torch_util.auto_rnn_bilstm(self.lstm, p_s1, l1)
+
         len1 = s1_layer1_out.size(0)
-        len2 = s2_layer1_out.size(0)
         p_s1 = p_s1[:len1, :, :] # [T, B, D]
-        p_s2 = p_s2[:len2, :, :] # [T, B, D]
 
         # CNN sliding over input
         s1_cnn_out = torch_util.pack_list_sequence(torch_util.text_conv1d(p_s1, l1, self.conv_f, k_size=3, gate_way=False), l1)
+
+        s1_layer2_in = torch.cat([p_s1, s1_layer1_out], dim=2) # [T, B, D]
+        s1_layer2_out = torch_util.auto_rnn_bilstm(self.lstm_1, s1_layer2_in, l1)
+
+        s1_layer3_in = torch.cat([p_s1, s1_layer1_out, s1_layer2_out, s1_cnn_out], dim=2)
+        s1_layer3_out = torch_util.auto_rnn_bilstm(self.lstm_2, s1_layer3_in, l1)
+
+        s1_layer3_maxout = torch_util.max_along_time(s1_layer3_out, l1)
+
+        # vector for sentence 1 : s1_layer3_maxout
+
+        # Start encoding sentence 2
+
+        p_s2 = self.Embd(s2)
+        s2_layer1_out = torch_util.auto_rnn_bilstm(self.lstm, p_s2, l2)
+
+        len2 = s2_layer1_out.size(0)
+        p_s2 = p_s2[:len2, :, :] # [T, B, D]
+
+        # CNN sliding over input
         s2_cnn_out = torch_util.pack_list_sequence(torch_util.text_conv1d(p_s2, l2, self.conv_f, k_size=3, gate_way=False), l2)
 
         # Using residual connection
-        s1_layer2_in = torch.cat([p_s1, s1_layer1_out], dim=2) # [T, B, D]
         s2_layer2_in = torch.cat([p_s2, s2_layer1_out], dim=2) # [T, B, D]
-
-        s1_layer2_out = torch_util.auto_rnn_bilstm(self.lstm_1, s1_layer2_in, l1)
         s2_layer2_out = torch_util.auto_rnn_bilstm(self.lstm_1, s2_layer2_in, l2)
 
-        s1_layer3_in = torch.cat([p_s1, s1_layer1_out, s1_layer2_out, s1_cnn_out], dim=2)
         s2_layer3_in = torch.cat([p_s2, s2_layer1_out, s2_layer2_out, s2_cnn_out], dim=2)
-
-        s1_layer3_out = torch_util.auto_rnn_bilstm(self.lstm_2, s1_layer3_in, l1)
         s2_layer3_out = torch_util.auto_rnn_bilstm(self.lstm_2, s2_layer3_in, l2)
 
-        s1_layer3_maxout = torch_util.max_along_time(s1_layer3_out, l1)
         s2_layer3_maxout = torch_util.max_along_time(s2_layer3_out, l2)
+
+        # vector for sentence 2 : s2_layer3_maxout
 
         # Only use the last layer
         features = torch.cat([s1_layer3_maxout, s2_layer3_maxout,
