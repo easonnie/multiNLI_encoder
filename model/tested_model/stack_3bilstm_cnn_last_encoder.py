@@ -16,7 +16,7 @@ import config
 
 
 class StackBiLSTMMaxout(nn.Module):
-    def __init__(self, h_size=[512, 1024, 2048], v_size=10, d=300, mlp_d=1600, dropout_r=0.1, max_l=60):
+    def __init__(self, h_size=[64, 128, 256], v_size=10, d=300, mlp_d=600, dropout_r=0.5, max_l=60):
         super(StackBiLSTMMaxout, self).__init__()
         self.Embd = nn.Embedding(v_size, d)
 
