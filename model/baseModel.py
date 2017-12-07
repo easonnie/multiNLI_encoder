@@ -1,13 +1,6 @@
 import torch
 import torch.nn as nn
-from torch import optim
-from torch.autograd import Variable
-import numpy as np
 import torch_util
-from tqdm import tqdm
-
-import util.data_loader as data_loader
-import config
 
 
 class BiLSTMMaxout(nn.Module):
@@ -18,16 +11,9 @@ class BiLSTMMaxout(nn.Module):
                             num_layers=1, bidirectional=True)
         self.h_size = h_size
 
-        # self.feature_bn = nn.BatchNorm1d(h_size * 3 * 2)
-
         self.mlp_1 = nn.Linear(h_size * 4 * 2, mlp_d)
         self.mlp_2 = nn.Linear(mlp_d, mlp_d)
         self.sm = nn.Linear(mlp_d, 3)
-
-        # self.classifier = nn.Sequential(*[self.feature_bn,
-        #                                   self.mlp_1, nn.ReLU(), nn.Dropout(dropout_r),
-        #                                   self.mlp_2, nn.ReLU(), nn.Dropout(dropout_r),
-        #                                   self.sm])
 
         self.classifier = nn.Sequential(*[self.mlp_1, nn.ReLU(), nn.Dropout(dropout_r),
                                           self.mlp_2, nn.ReLU(), nn.Dropout(dropout_r),
@@ -91,5 +77,4 @@ def model_eval(model, data_iter, criterion, pred=False):
 
 
 if __name__ == '__main__':
-    # train_BiLSTMMaxout()
     pass
