@@ -14,9 +14,11 @@ from datetime import datetime
 import util.data_loader as data_loader
 import config
 
+import fire
+
 
 class StackBiLSTMMaxout(nn.Module):
-    def __init__(self, h_size=[64, 128, 256], v_size=10, d=300, mlp_d=800, dropout_r=0.5, max_l=60):
+    def __init__(self, h_size=[512, 1024, 2048], v_size=10, d=300, mlp_d=1600, dropout_r=0.1, max_l=60):
         super(StackBiLSTMMaxout, self).__init__()
         self.Embd = nn.Embedding(v_size, d)
 
@@ -120,17 +122,10 @@ def train(combined_set=False):
     name = '[512,1024,2048]-3stack-bilstm-last_maxout'
     file_path = save_tool.gen_prefix(name, date_now)
 
-    """
-    Attention:!!!
-        Modify this to save to log file.
-    """
-    message = "w(300) -> 512 bilstm -> h1(2048)\n" + \
-              "[w(300), h1(2048)] -> 2048 bilstm -> h2(4096) -> maxout -> h2(4096) //Using high way\n" + \
-              "[h2,h2,abs(h1-h2),h1*h2](4096 * 4) -> 1200-mlp -> 1600-mlp -> 3-sm\n"
+    message = " "
 
     save_tool.logging2file(file_path, 'code', None, __file__)
     save_tool.logging2file(file_path, 'message', message, __file__)
-
 
     iterations = 0
 
@@ -153,8 +148,6 @@ def train(combined_set=False):
             train_iter = data_loader.combine_two_set(s_train, m_train, rate=[0.15, 1], seed=i)
             dev_iter, test_iter = s_dev, s_test
 
-        best_dev = -1
-        best_test = -1
         start_perf = model_eval(model, dev_iter, criterion)
         i_decay = i // 2
         lr = start_lr / (2 ** i_decay)
@@ -187,13 +180,12 @@ def train(combined_set=False):
             optimizer.step()
 
             if i == 0 or i == 1:
-                mod = 6000
+                mod = 9000
             else:
                 mod = 100
 
             if (1 + batch_idx) % mod == 0:
                 dev_score, dev_loss = model_eval(model, dev_iter, criterion)
-                test_score, test_loss = -1, -1
                 print('SNLI:{}/{}'.format(dev_score, dev_loss), end=' ')
 
                 model.max_l = 150
@@ -205,8 +197,6 @@ def train(combined_set=False):
                 model.max_l = 60
 
                 now = datetime.now().strftime("%m-%d-%H:%M:%S")
-                log_info = "{}\t{}\tdev:{}/{}\ttest:{}/{}\t{}\n".format(i, iterations, dev_score, dev_loss, test_score, test_loss, now)
-                save_tool.logging2file(file_path, "log", log_info)
                 log_info_mnli = "dev_m:{}/{} um:{}/{}\n".format(mdm_score, mdm_loss, mdum_score, mdum_loss)
                 save_tool.logging2file(file_path, "log", log_info_mnli)
 
@@ -227,16 +217,14 @@ def train(combined_set=False):
 
         SAVE_PATH = os.path.join(config.ROOT_DIR, file_path, 'm_{}'.format(i))
         torch.save(model.state_dict(), SAVE_PATH)
-        print(best_test)
 
 
-def evaluation():
+def build_kaggle_submission_file(model_path):
     torch.manual_seed(6)
 
     snli_d, mnli_d, embd = data_loader.load_data_sm(
         config.DATA_ROOT, config.EMBD_FILE, reseversed=False, batch_sizes=(32, 32, 32, 32, 32), device=0)
 
-    # s_train, s_dev, s_test = snli_d
     m_train, m_dev_m, m_dev_um, m_test_m, m_test_um = mnli_d
 
     m_test_um.shuffle = False
@@ -246,24 +234,15 @@ def evaluation():
 
     model = StackBiLSTMMaxout()
     model.Embd.weight.data = embd
-    model.display()
+    # model.display()
 
     if torch.cuda.is_available():
         embd.cuda()
         model.cuda()
 
     criterion = nn.CrossEntropyLoss()
-    # /home/easonnie/Projects/ssu/
-    # /home/easonnie/Projects/ssu/
-    # /home/easonnie/Projects/ssu/saved_model/06-12-10:33:16_[1024,2048]-stack-bilstm-last_maxout/saved_params/
-    # /home/easonnie/Projects/ssu/saved_model/06-12-10:33:16_[1024,2048]-stack-bilstm-last_maxout/saved_params/
-    # /home/easonnie/Projects/ssu/saved_model/06-13-02:21:31_[512,1024,2048]-3stack-bilstm-last_maxout/saved_params/e(2)_m_m(74.1110545084055)_um(74.55248169243288)
-    # /home/easonnie/Projects/ssu/saved_model/06-13-02:21:31_[512,1024,2048]-3stack-bilstm-last_maxout/saved_params/e(2)_m_m(73.84615384615384)_um(75.0)
-    # /home/easonnie/Projects/ssu/saved_model/06-14-01:31:38_[512,1024,2048]-3stack-bilstm+cnn-last_maxout/saved_params/e(2)_m_m(74.01935812531839)_um(74.11513425549226)
 
-    file_path = "saved_model/06-14-01:31:38_[512,1024,2048]-3stack-bilstm+cnn-last_maxout/saved_params/e(2)_m_m(74.01935812531839)_um(74.11513425549226)"
-    SAVE_PATH = os.path.join(config.ROOT_DIR, file_path)
-    model.load_state_dict(torch.load(SAVE_PATH))
+    model.load_state_dict(torch.load(model_path))
 
     m_pred = model_eval(model, m_test_m, criterion, pred=True)
     um_pred = model_eval(model, m_test_um, criterion, pred=True)
@@ -285,7 +264,42 @@ def evaluation():
             f.write(str(j + 9847) + "," + index[k] + "\n")
 
 
+def eval_model(model_path, mode='dev'):
+    torch.manual_seed(6)
+
+    snli_d, mnli_d, embd = data_loader.load_data_sm(
+        config.DATA_ROOT, config.EMBD_FILE, reseversed=False, batch_sizes=(32, 32, 32, 32, 32), device=0)
+
+    m_train, m_dev_m, m_dev_um, m_test_m, m_test_um = mnli_d
+
+    m_dev_um.shuffle = False
+    m_dev_m.shuffle = False
+    m_dev_um.sort = False
+    m_dev_m.sort = False
+
+    m_test_um.shuffle = False
+    m_test_m.shuffle = False
+    m_test_um.sort = False
+    m_test_m.sort = False
+
+    model = StackBiLSTMMaxout()
+    model.Embd.weight.data = embd
+
+    if torch.cuda.is_available():
+        embd.cuda()
+        model.cuda()
+
+    criterion = nn.CrossEntropyLoss()
+
+    model.load_state_dict(torch.load(model_path))
+
+    model.max_l = 150
+    m_pred = model_eval(model, m_dev_m, criterion)
+    um_pred = model_eval(model, m_dev_um, criterion)
+
+    print("dev_mismatched_score (acc, loss):", um_pred)
+    print("dev_matched_score (acc, loss):", m_pred)
+
+
 if __name__ == '__main__':
-    train(True)
-    # evaluation()
-    # train_and_fine_select(True)
+    fire.Fire()

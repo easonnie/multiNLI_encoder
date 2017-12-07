@@ -1,6 +1,13 @@
 import torch
 import torch.nn as nn
+from torch import optim
+from torch.autograd import Variable
+import numpy as np
 import torch_util
+from tqdm import tqdm
+
+import util.data_loader as data_loader
+import config
 
 
 class BiLSTMMaxout(nn.Module):
