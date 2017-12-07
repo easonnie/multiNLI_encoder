@@ -36,9 +36,6 @@ def load_data(data_root, embd_file, reseversed=True, batch_sizes=(32, 32, 32), d
     train, dev, test = datasets.SNLI.splits(testl_field, y_field, transitions_field, root=data_root)
     testl_field.build_vocab(train, dev, test)
     y_field.build_vocab(train)
-    # print(vars(train[0]))
-    # print(vars(train[1]))
-    # print(vars(train[2]))
 
     testl_field.vocab.vectors = torch.load(embd_file)
 
@@ -137,12 +134,6 @@ def load_data_with_dict(data_root, embd_file, reseversed=True, batch_sizes=(32, 
         batch_sizes=(train_size, m_dev_size, m_test_size, m_dev_size, m_test_size),
         device=device, shuffle=False, sort=False)
 
-    # if random_combined:
-    #     snli_train.examples = list(np.random.choice(snli_train.examples, round(len(snli_train) * rate), replace=False)) + mnli_train.examples
-    #     train = snli_train
-    #     train_iter = data.Iterator.splits(train, batch_sizes=train_size, device=device, shuffle=False, sort=False)
-    #     mnli_train_iter, snli_train_iter = train_iter, train_iter
-
     return (snli_train_iter, snli_dev_iter, snli_test_iter), (mnli_train_iter, mnli_dev_m_iter, mnli_dev_um_iter, mnli_test_m_iter, mnli_test_um_iter), testl_field.vocab.vectors, testl_field.vocab
 
 
@@ -174,54 +165,5 @@ def combine_two_set(set_1, set_2, rate=(1, 1), seed=0):
 
 
 if __name__ == '__main__':
-    snli, mnli, embd = load_data_sm(config.DATA_ROOT, config.EMBD_FILE, reseversed=False,
-                                    batch_sizes=(32, 32, 32))
-
-    s_train, s_dev, s_test = snli
-    m_train, m_dev_m, m_dev_um, m_test_m, m_test_um = mnli
-    # m_train.shuffle = True
-
-    train = combine_two_set(s_train, m_train, rate=[0.15, 1])
-
-    print(len(list(train)))
-    print(len(m_train))
-    print(len(s_train))
-    # m_train.shuffle = True
-
-    # snli_size = len(s_train)
-    # n_train = itertools.compress(s_train, [0] * snli_size)
-    # print(len(n_train))
-
-
-    # print(embd[30][:5])
-    # print(embd[130][:5])
-    # print(embd[4][:5])
-    # print(embd[10481][:5])
-    # print(embd[7][:5])
-    # print(embd[89][:5])
-    # print(embd[3316][:5])
-
-    # print(train_iter.epoch)
-    # batch = next(iter(s_train))
-    # # # print('s1', batch.premise)
-    # # # print(batch.batch_size)
-    # s2, s2_l = batch.hypothesis
-    # s2_t = batch.hypothesis_transitions
-    # y = batch.label
-    # #
-    # print('s2', s2, s2_l - 1)
-    # print('s2_t', s2_t)
-    # print('label', y)
-
-    # batch = next(iter(m_dev_m))
-
-    # s2, s2_l = batch.hypothesis
-    # s2_t = batch.hypothesis_transitions
-    # y = batch.label
-    #
-    # print('s2', s2, s2_l - 1)
-    # print('s2_t', s2_t)
-    # print('label', y)
-
-    # print(s2.index_select(1, s2_l - 1))
-    # print(torch.index_select(s2.data, 1, (s2_l - 1)))
+    pass
+  
