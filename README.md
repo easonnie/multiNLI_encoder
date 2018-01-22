@@ -2,7 +2,8 @@
 This is a repo for multiNLI_encoder.
 
 **Note:**
-This repo is about Shortcut-Stacked Sentence Encoders for the MultiNLI dataset. We recommend users to check this new repo: (https://github.com/easonnie/ResEncoder)[https://github.com/easonnie/ResEncoder], especially if you are interested in SNLI or Residual-Stacked Sentence Encoders. This new encoder achieves almost same results as the shortcut-stacked one with much fewer parameters. See (https://arxiv.org/abs/1708.02312)[https://arxiv.org/abs/1708.02312] (Section 6) for comparing results.
+This repo is about Shortcut-Stacked Sentence Encoders for the MultiNLI dataset. We recommend users to check this new repo: [https://github.com/easonnie/ResEncoder](https://github.com/easonnie/ResEncoder), especially if you are interested in SNLI or Residual-Stacked Sentence Encoders.  
+This new encoder achieves almost same results as the shortcut-stacked one with much fewer parameters. See [https://arxiv.org/abs/1708.02312](https://arxiv.org/abs/1708.02312) (Section 6) for comparing results.
 
 Try to follow the instruction below to successfully run the experiment.
 
