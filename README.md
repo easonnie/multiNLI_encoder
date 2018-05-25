@@ -61,7 +61,7 @@ Before running the experiments, make sure that the structure of this repo should
 5.Start training by run the script in the root directory.
 ```
 source setup.sh
-python model/tested_model/stack_3bilstm_last_encoder.py
+python model/tested_model/stack_3bilstm_last_encoder.py train
 ```
 
 6.After training completed, there will be a folder created by the script in the `saved_model` directory that you created in step 3.
